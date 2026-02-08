@@ -5,8 +5,8 @@ This project implements an image processing pipeline on FPGA using Verilog HDL o
 ## Current Scope
 - Hex file based image input
 - Pixel-level operations:
-  - Brightness control
-  - Saturation control
+  - Grayscale Conversion
+
 - Display output exploration:
   - FPGA → SoC → display
 
