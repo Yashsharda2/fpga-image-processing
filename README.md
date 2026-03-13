@@ -35,7 +35,7 @@ Real-time image processing pipeline on the **Vaaman FPGA board** (Efinix Trion T
 ### In Progress
 - IMX219 camera hardware bring-up (I2C detection issue)
 - FPGA communication overlay on RK3399 side
-- Display output over VNC (HDMI emulator ordered)
+- Display output 
 
 ### Planned
 - Sobel edge detection
