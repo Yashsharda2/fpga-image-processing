@@ -4,7 +4,7 @@ input rst,
 input wire [23:0] pixel,
 output reg [23:0] gray
 );
- (* keep *) wire [23:0] pixel;
+
 
 reg [7:0] y;
   always@(posedge clk)begin
