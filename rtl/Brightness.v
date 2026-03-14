@@ -1,6 +1,7 @@
 module Brightness(
 input clk,
 input rst,
+input pixel_valid,
 input signed [8:0] R,G,B,
 input wire [23:0] pixel,
 output reg [23:0] bright
@@ -15,7 +16,7 @@ assign sum_b = $signed({1'b0, pixel[7:0]})   +  B;
 always@(posedge clk)begin
 if(rst)
 bright<=24'd0;
-else begin
+else if(pixel_valid) begin
 
 if (sum_r<0)
     bright[23:16] <= 0;

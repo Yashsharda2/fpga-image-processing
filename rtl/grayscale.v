@@ -1,6 +1,7 @@
 module grayscale(     // Grayscale
 input clk,
 input rst,
+input pixel_valid,
 input wire [23:0] pixel,
 output reg [23:0] gray
 );

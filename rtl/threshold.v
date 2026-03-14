@@ -2,6 +2,7 @@ module threshold(
 input clk,
 input rst,
 input [7:0] T,
+input pixel_valid,
 input wire [23:0] pixel,
 output reg [23:0] b_w
 );
@@ -16,7 +17,7 @@ assign sum_bw =
 always@(posedge clk)begin
 if(rst)
 b_w<=0;
-else begin
+else if(pixel_valid) begin
 if(sum_bw>thresh)
 b_w<=24'hFFFFFF;
 else

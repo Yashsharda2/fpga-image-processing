@@ -38,7 +38,7 @@ module image (
     output                      my_mipi_tx_ULPS_CLK_ENTER,
     output                      my_mipi_tx_ULPS_CLK_EXIT,
 
-    input  [1:0]                mode       // 00=grayscale 01=brightness 10=threshold
+    input  [2:0]                mode       // 00=grayscale 01=brightness 10=threshold
   
 );
 
@@ -141,6 +141,7 @@ assign wr_data[(`CAM_RX * RAH_PACKET_WIDTH) +: RAH_PACKET_WIDTH] =
 wire [23:0] gray_out;
 wire [23:0] bright_out;
 wire [23:0] thresh_out;
+wire [23:0] sobel_out;
 
 grayscale gs (
     .clk   (rx_pixel_clk),
@@ -167,13 +168,22 @@ threshold th (
     .b_w   (thresh_out)
 );
 
+sobel sb (
+    .clk          (rx_pixel_clk),
+    .rst          (rst),
+    .pixel_valid  (pixel_valid),
+    .pixel        (pixel),
+    .edge_out     (sobel_out)
+);
+
 /* Mode select */
 reg [23:0] processed_pixel;
 always @(posedge rx_pixel_clk) begin
     case (mode)
-        2'b00: processed_pixel <= gray_out;
-        2'b01: processed_pixel <= bright_out;
-        2'b10: processed_pixel <= thresh_out;
+        3'b000: processed_pixel <= gray_out;
+        3'b001: processed_pixel <= bright_out;
+        3'b010: processed_pixel <= thresh_out;
+        3'b011: processed_pixel <= sobel_out;
         default: processed_pixel <= gray_out;
     endcase
 end
