@@ -1,1 +1,17 @@
+# Efinity generated folders
+outflow/
+work_pnr/
+work_pt/
+work_syn/
 
+# simulation outputs
+*.vcd
+
+# generated files
+*.hex
+*.xml
+*.peri.xml
+*.lock
+
+# logs
+*.log
