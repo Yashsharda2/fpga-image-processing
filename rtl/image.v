@@ -38,8 +38,8 @@ module image (
     output                      my_mipi_tx_ULPS_CLK_ENTER,
     output                      my_mipi_tx_ULPS_CLK_EXIT,
 
-    input  [2:0]                mode       // 00=grayscale 01=brightness 10=threshold
-  
+    input  [2:0]                mode,      // 000=grayscale 001=brightness 010=threshold 011=sobel
+    output                  led        // blinks to confirm bitstream loaded
 );
 
 parameter RAH_PACKET_WIDTH  = 48;
@@ -47,7 +47,7 @@ parameter ACTIVE_VID_WIDTH  = 400;
 parameter ACTIVE_VID_HEIGHT = 266;
 parameter TOTAL_APPS        = `TOTAL_APPS + 1;  // = 2
 
-/* Fixed internal values — make ports later when needed */
+/* Fixed internal values */
 wire        rst      = 1'b0;
 wire signed [8:0] bright_R = 9'd20;
 wire signed [8:0] bright_G = 9'd20;
@@ -132,51 +132,80 @@ cam_rx #(.RAH_PACKET_WIDTH(RAH_PACKET_WIDTH)) cam (
     .pixel_valid             (pixel_valid)
 );
 
-/* Send processed result back to SoC */
-assign write_apps_data[`CAM_RX] = pixel_valid;
-assign wr_data[(`CAM_RX * RAH_PACKET_WIDTH) +: RAH_PACKET_WIDTH] = 
-       {{(RAH_PACKET_WIDTH-24){1'b0}}, processed_pixel};
-
-/* Processing modules */
+/* Processing module output wires */
 wire [23:0] gray_out;
 wire [23:0] bright_out;
 wire [23:0] thresh_out;
 wire [23:0] sobel_out;
 
+/* Pixel valid delay chain for latency compensation */
+reg pv_d1, pv_d2;
+always @(posedge rx_pixel_clk) begin
+    pv_d1 <= pixel_valid;
+    pv_d2 <= pv_d1;
+end
+
+/* Per-module valid signals matched to their pipeline latency */
+wire gray_valid   = pv_d2;  // grayscale:  2 cycle latency
+wire bright_valid = pv_d1;  // brightness: 1 cycle latency
+wire thresh_valid = pv_d1;  // threshold:  1 cycle latency
+wire sobel_valid  = pv_d2;  // sobel:      2 cycle latency
+
+/* Mode-selected processed_valid — drives write back to SoC */
+reg processed_valid;
+always @(posedge rx_pixel_clk) begin
+    case (mode)
+        3'b000: processed_valid <= gray_valid;
+        3'b001: processed_valid <= bright_valid;
+        3'b010: processed_valid <= thresh_valid;
+        3'b011: processed_valid <= sobel_valid;
+        default: processed_valid <= gray_valid;
+    endcase
+end
+
+/* Send processed result back to SoC */
+assign write_apps_data[`CAM_RX] = processed_valid;  // FIXED: was pixel_valid
+assign wr_data[(`CAM_RX * RAH_PACKET_WIDTH) +: RAH_PACKET_WIDTH] =
+       {{(RAH_PACKET_WIDTH-24){1'b0}}, processed_pixel};
+
+/* Processing modules — all get pixel_valid connected */
 grayscale gs (
-    .clk   (rx_pixel_clk),
-    .rst   (rst),
-    .pixel (pixel),
-    .gray  (gray_out)
+    .clk         (rx_pixel_clk),
+    .rst         (rst),
+    .pixel_valid (pixel_valid),  // FIXED: was missing
+    .pixel       (pixel),
+    .gray        (gray_out)
 );
 
 Brightness br (
-    .clk   (rx_pixel_clk),
-    .rst   (rst),
-    .R     (bright_R),
-    .G     (bright_G),
-    .B     (bright_B),
-    .pixel (pixel),
-    .bright(bright_out)
+    .clk         (rx_pixel_clk),
+    .rst         (rst),
+    .pixel_valid (pixel_valid),
+    .R           (bright_R),
+    .G           (bright_G),
+    .B           (bright_B),
+    .pixel       (pixel),
+    .bright      (bright_out)
 );
 
 threshold th (
-    .clk   (rx_pixel_clk),
-    .rst   (rst),
-    .T     (thresh_T),
-    .pixel (pixel),
-    .b_w   (thresh_out)
+    .clk         (rx_pixel_clk),
+    .rst         (rst),
+    .pixel_valid (pixel_valid),  // FIXED: was missing
+    .T           (thresh_T),
+    .pixel       (pixel),
+    .b_w         (thresh_out)
 );
 
 sobel sb (
-    .clk          (rx_pixel_clk),
-    .rst          (rst),
-    .pixel_valid  (pixel_valid),
-    .pixel        (pixel),
-    .edge_out     (sobel_out)
+    .clk         (rx_pixel_clk),
+    .rst         (rst),
+    .pixel_valid (pixel_valid),
+    .pixel       (pixel),
+    .edge_out    (sobel_out)
 );
 
-/* Mode select */
+/* Mode select mux */
 reg [23:0] processed_pixel;
 always @(posedge rx_pixel_clk) begin
     case (mode)
@@ -187,8 +216,6 @@ always @(posedge rx_pixel_clk) begin
         default: processed_pixel <= gray_out;
     endcase
 end
-
-
 
 /* rah_encoder */
 wire vid_gen_clk;
@@ -217,6 +244,9 @@ rah_encoder #(
     .hsync_patgen        (hsync),
     .vsync_patgen        (vsync)
 );
+
+/* LED blink — confirms bitstream is loaded and clock is running (~1Hz) */
+assign led = 1'b1;
 
 /* MIPI TX outputs */
 assign my_mipi_tx_DPHY_RSTN      = ~mipi_out_rst;

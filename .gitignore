@@ -1,17 +1,24 @@
-# Efinity generated folders
-outflow/
-work_pnr/
-work_pt/
+# Efinity Generated Output
 work_syn/
+work_pt/
+work_pnr/
+outflow/
 
-# simulation outputs
-*.vcd
-
-# generated files
-*.hex
+# Efinity Project Files
 *.xml
 *.peri.xml
-*.lock
 
-# logs
-*.log
+# Simulation Files
+*.vcd
+sim/
+tb/
+
+# IP cores (generated)
+ip/
+
+# Hex files (generated from scripts)
+*.hex
+
+# OS
+.DS_Store
+Thumbs.db
