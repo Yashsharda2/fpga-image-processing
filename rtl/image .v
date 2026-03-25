@@ -3,7 +3,7 @@
 module image (
     input                       rx_pixel_clk,
     input                       tx_pixel_clk,
-    input                       tx_vga_clk,   
+    input                       tx_vga_clk,
 
     input                       my_mipi_rx_VALID,
     input [3:0]                 my_mipi_rx_HSYNC,
@@ -102,10 +102,6 @@ rah_decoder #(.TOTAL_APPS(TOTAL_APPS), .DATA_WIDTH(RAH_PACKET_WIDTH)) rd (
     .error                   (rd_error)
 );
 
-
-wire rx_pixel_clk;  // 50 MHz
-wire tx_pixel_clk;  // 50 MHz
-wire tx_vga_clk;    // 75 MHz
 
 assign rd_clk[0] = rx_pixel_clk;
 assign wr_clk[0] = rx_pixel_clk;
