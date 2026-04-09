@@ -1,37 +1,68 @@
 module cam_rx (
-    input                         clk,
-    input                         data_queue_empty,
-    input                         data_queue_almost_empty,
-    output reg                    request_data = 0,
-    input  [RAH_PACKET_WIDTH-1:0] data_frame,
-
-    output reg [23:0]             pixel = 0,
-    output reg                    pixel_valid = 0
+    input                               clk,
+    input  [RAH_PACKET_WIDTH-1:0]       a,      
+    input                               empty,  
+ 
+    output reg [RAH_PACKET_WIDTH-1:0]   c = 0,  
+    output reg                          rden = 0, 
+    output reg                          wren = 0 
 );
-
+ 
 parameter RAH_PACKET_WIDTH = 48;
+ 
+localparam IDLE    = 3'd0;
+localparam REQ     = 3'd1;
+localparam WAIT    = 3'd2;
+localparam PROCESS = 3'd3;
+localparam WRITE   = 3'd4;
+ 
+reg [2:0] state = IDLE;
+reg [23:0] pixel = 0;
+ 
 
-reg [1:0] state = 0;
-
+wire [7:0] gray;
+assign gray = (pixel[23:16] * 8'd77 +
+               pixel[15:8]  * 8'd150 +
+               pixel[7:0]   * 8'd29) >> 8;
+ 
 always @(posedge clk) begin
-    pixel_valid <= 0;
     case (state)
-        0: begin
-            if (~data_queue_empty) begin
-                request_data <= 1;
-                state <= 1;
+ 
+        IDLE: begin
+            wren  <= 0;
+            rden  <= 0;
+            if (~empty) begin
+                rden  <= 1;
+                state <= REQ;
             end
         end
-        1: begin
-            request_data <= 0;
-            state <= 2;
+ 
+       
+        REQ: begin
+            rden  <= 0;
+            state <= WAIT;
         end
-        2: begin
-            pixel       <= data_frame[23:0];
-            pixel_valid <= 1;
-            state <= 0;
+ 
+        
+        WAIT: begin
+            pixel <= a[23:0];
+            state <= PROCESS;
         end
+ 
+       
+        PROCESS: begin
+            c     <= {24'h0, gray, gray, gray}; // R=G=B=gray, packed as 24-bit RGB in lower 48
+            wren  <= 1;
+            state <= WRITE;
+        end
+ 
+        WRITE: begin
+            wren  <= 0;
+            state <= IDLE;
+        end
+ 
     endcase
 end
-
+ 
 endmodule
+ 

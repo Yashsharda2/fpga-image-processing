@@ -1,4 +1,4 @@
-`define TOTAL_APPS 1
+`define TOTAL_APPS 2
 
 `define CAM_RX 1
 
